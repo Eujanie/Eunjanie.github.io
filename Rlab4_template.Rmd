@@ -1,0 +1,225 @@
+---
+title: "Lab4"
+author: "Eunjin Park"
+date: "date"
+output:
+  pdf_document
+header-includes:
+- \renewcommand*\familydefault{\sfdefault} %% this picks a sans serif font
+- \usepackage[T1]{fontenc}
+---
+```{r setup, echo=F}
+knitr::opts_chunk$set(cache = F)
+```
+
+**DELETE ANYTHING FROM THIS TEMPLATE BELOW THAT IS NOT PART OF YOUR SOLUTION.**
+
+(0) Instructions for installing tinytex for PDF rendering: [**https://yihui.org/tinytex/**](https://yihui.org/tinytex/)
+ 
+```{r, eval = F}
+install.packages('tinytex')
+tinytex::install_tinytex()
+```
+
+### I. First Model
+
+(1) It’s usually a good idea to change any categorical explanatory variables to factors before implementing
+linear regression in R. Provide executable code (PEC) that changes the MPA variable to a factor. Which
+of the 5 areas is assigned to the 3rd level?
+
+```{r}
+Lob = read.csv("6dd93320.csv")
+
+Lob$MPA = as.factor(Lob$MPA)
+
+levels(Lob$MPA)[3]
+```
+
+(2)Which variable gives the density of giant kelp? Proportion of ‘feather boa’ kelp? Of all the species
+of kelp in the dataset, which do you like the best? Why?
+-> Marco_dens
+
+
+(3)For each of the following explanatory variables, give the variables type (continuous or categorical) and number of levels if categorical: "MPA", "Inside_Outside", "Depth_m", "Relief_cm",
+"Flat_Rock", "Cobble", "Boulder", "Sand"
+```{r}
+#str(Lob)
+#table(Lob$MPA)
+#variable1 = as.factor(Lob$Inside_Outside)
+#class(variable1)
+#table(variable1)
+#levels(variable1) #how many levels
+
+```
+
+```{r}
+set = unique(Lob$MPA)
+length(set)
+set = unique(Lob$Cobble)
+length(set)
+
+class(Lob$Inside_Outside)
+class(Lob$Depth_m)
+class(Lob$Relief_cm)
+class(Lob$Flat_Rock)
+class(Lob$Boulder)
+class(Lob$Sand)
+```
+-> Regarding MPA and Cobble both variables are categorical. And rest of the variables are continuous.
+
+(4) Use R to create the model matrix, X, for a multiple regression model that uses the variables in (3) as
+predictors (PEC). What are the dimensions of X? Explain in your own words why the number of columns
+is not equal to the number of variable names, 8.
+```{r}
+Lob_form = Lob_total ~ MPA + Inside_Outside + Depth_m + Relief_cm + Flat_Rock + Cobble + Boulder + Sand
+
+X = model.matrix(Lob_form, data = Lob, contrasts.arg = NULL, xlev = NULL)
+X[1,]
+dim(X)
+
+```
+
+(5)PEC that produces the correlation plot shown below (hint: you may want to adjust the tl.cex
+argument in corrplot()). Which two variables show the strongest correlation? What is their correlation
+coefficient?
+```{r}
+#install.packages("corrplot")
+library(corrplot)
+Lob_data = Lob[ , c(1:9)]
+corrplot(cor(X[ , -1]), tl.cex = 0.7)
+
+
+cor(Lob$Sand, Lob$Flat_Rock)
+```
+-> Sand and Flat_Rock have strongly negative correlation.
+
+
+(6) PEC that fits a linear regression model for the density of lobsters as a function of the explanatory
+variables in (3). Create two different plots that help check the assumption that the residuals are identically
+distributed and normal. What do your plots suggest?
+-> According to qqplot, there are outliers and each scatters are not normally distributed. 
+
+```{r}
+Lob_lm = lm(Lob_dens ~ MPA + Inside_Outside + Depth_m + Relief_cm + Flat_Rock + Cobble + Boulder, data = Lob)
+layout(matrix(2:1, ncol = 2))
+qqnorm(resid(Lob_lm))
+qqline(resid(Lob_lm))
+plot(Lob_lm, which = 1)
+```
+
+(7)Now fit a new model with the same predictors to the cube-root, y
+1/3, of lobster density and re-create
+the two plots from (6). What do your new plots suggest?
+
+-> Residuals for cube-root prediction is normally distributed.
+```{r}
+Lob_cube = lm(Lob_dens^(1/3) ~ MPA + Inside_Outside + Depth_m + Relief_cm + Flat_Rock + Cobble + Boulder, data = Lob)
+
+qqnorm(resid(Lob_cube))
+qqline(resid(Lob_cube))
+```
+
+(8)Which continuous explanatory variable has the largest estimated effect in magnitude on the cuberoot of lobster density? For which continuous explanatory variable do we have the greatest evidence that
+the effect is non-zero?
+
+-> MPA point
+```{r}
+summary(Lob_cube)
+```
+
+(9)• Plot the density of lobsters as a function of depth, and color each point based on its associated MPA.
+Include a legend.3
+```{r}
+plot(Lob$Depth_m, Lob$Lob_dens, col=c(1:5)[Lob$MPA], legend = levels(Lob$MPA))
+legend("topright" , legend = c("Laguna Beach State Marine Reserve","Point Vicente State Marine Conservation Area", "South La Jolla State Marine","Swami's State Marine Conservation Area"), col=1:5, pch =1)
+
+```
+
+• Add a curve that shows the predicted lobster density (not the cube-root of lobster density ) for “Laguna Beach State Marine Reserve” inside the MPA, with all other variables set to their respective sample means.
+Color the curve to match your point color for “Laguna Beach State Marine Reserve” (PEC).
+```{r}
+#Lob_lm = lm(Lob_dens ~ MPA + Inside_Outside + Depth_m + Relief_cm + Flat_Rock + Cobble + Boulder, data = Lob)
+#formula_log_transform <- log(stopduration) ~ exp_years + isschool + isguest +
+#perceived_limited_english + perceived_age + perceived_gender + perceived_lgbt
+
+#fit_log_transform= Lob_lm <- lm(formula_log_transform, data = ripa_2021)
+
+
+
+
+#perceived_lgbt <- data.frame(exp_years = median(Lob$MPA),
+#isschool = 1, isguest = 0,
+#perceived_limited_english = 0,
+#perceived_age = median(Lob$perceived_age),
+#perceived_gender = "Female",
+#perceived_lgbt = "Yes")
+
+#exp(predict(fit_log_transform, newdata = perceived_lgbt, interval = "confidence"))
+
+#exp_sequence <- 0:max(Lob$MPA)
+#perceived_exp <- data.frame(Lob)
+#predictions <- exp(predict(Lob_lm, newdata = perceived_exp,
+#interval = "prediction"))
+```
+
+```{r}
+Lob_formula = Lob_dens ~ Depth_m 
+fit1 = lm(Lob_lm, data = Lob)
+plot(Lob$Depth_m, Lob$Lob_dens, col=Lob$MPA[Lob$MPA == "Laguna Beach State Marine Reserve"])
+CI = predict(Lob_lm, newdata = Lob, interval = "confidence")
+
+#lines(x_axis, CI[ , 'upr'], col = 4, lwd = 2)
+```
+
+• Add another curve that shows the upper bound on pointwise 95% confidence intervals for the predicted
+density of lobster at a new site for each depth.
+```{r}
+#plotCI = (x = Lob$Depth_m, y = Lob$Lob_dens , ui= Lob$upper)
+```
+
+### II. Model section
+(10) Begin with a model that includes all the variables used in section I. above, as well as the density of giant kelp and all percent-cover of the seaweed/algae variables: "MPA", "Inside_Outside", "Depth_m",
+"Relief_cm", "Flat_Rock", "Cobble", "Boulder", "Sand", "Macro_dens", "Pterygophora",
+"Laminaria", "Eisenia", "Egregia", "Cystoseira", "Plocamium", "Other_Red", "Coralline",
+"Surfgrass". Continue to use the cube-root of lobster density as a response.
+Use the step() function in R to select a model using backwards step selection based on AIC (PEC).
+Which variables are included?
+```{r}
+step(Lob_cube, scope = list(lower = ~ 1, upper = ~ MPA + Inside_Outside + Depth_m + Relief_cm + Flat_Rock + Cobble + Boulder), direction = "backward" )
+
+#scope는 분석할 때 고려할 변수의 범위를 정해주는 것이다. lower = ~1은 상수항부터 시작한다는 것을 입력한 것이고, 모든 변수를 고려하고 싶다면 upper에 설명변수를 모두 기입하면 된다. 그렇지 않다면, 원하는 변수만 기입하면 된다
+
+```
+-> 모든변수를 채택해서 회귀식도출
+(11) Use the step() function again to select a model, but this time start with the model from section I.
+and take steps in both directions (PEC). Which variables were included in the best model using backward
+step selection, but are not included when taking steps in both directions?
+```{r}
+step(Lob_lm, scope = list(lower= ~ 1, upper = ~MPA + Inside_Outside + Depth_m + Relief_cm + Flat_Rock + Cobble + Boulder), direction = "both" )
+```
+
+
+(12)Make a plot of Cook’s distances for each residual from the model fit in (11). With which MPA
+is the observation with the largest Cook’s distance associated? What else is special/interesting about this
+observation? Do you see any reason why it should be removed from the analysis?
+
+
+```{r}
+model = lm(Lob_dens ~ MPA + Inside_Outside + Depth_m + Relief_cm + Flat_Rock + Cobble + Boulder, data = Lob) 
+#plot(model)
+cooked_dist = cooks.distance(model) 
+
+#layout(matrix(1:2, 1, 2))
+plot(model , which = 4)
+
+
+```
+The diagnostic plots show residuals in four different ways:
+
+-Residuals vs Fitted: is used to check the assumptions of linearity. If the residuals are spread equally around a horizontal line without distinct patterns (red line is approximately horizontal at zero), that is a good indication of having a linear relationship.
+
+-Normal Q-Q: is used to check the normality of residuals assumption. If the majority of the residuals follow the straight dashed line, then the assumption is fulfilled.
+
+-Scale-Location: is used to check the homoscedasticity of residuals (equal variance of residuals). If the residuals are spread randomly and the see a horizontal line with equally (randomly) spread points, then the assumption is fulfilled.
+
+-Residuals vs Leverage: is used to identify any influential value in our dataset. Influential values are extreme values that might influence the regression results when included or excluded from the analysis. Look for cases outside of a dashed line.
