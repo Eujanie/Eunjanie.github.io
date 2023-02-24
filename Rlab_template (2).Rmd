@@ -1,0 +1,139 @@
+---
+title: "lb6"
+author: "Eunjin Park"
+date: "date"
+output:
+  pdf_document
+header-includes:
+- \renewcommand*\familydefault{\sfdefault} %% this picks a sans serif font
+- \usepackage[T1]{fontenc}
+---
+```{r setup, echo=F}
+knitr::opts_chunk$set(cache = F)
+```
+
+**DELETE ANYTHING FROM THIS TEMPLATE BELOW THAT IS NOT PART OF YOUR SOLUTION.**
+
+(0) Instructions for installing tinytex for PDF rendering: [**https://yihui.org/tinytex/**](https://yihui.org/tinytex/)
+ 
+```{r, eval = F}
+install.packages('tinytex')
+tinytex::install_tinytex()
+```
+
+### I.First section
+
+We will begin by analyzing the data using simple linear regression.
+(1) PEC that fits a linear regression model for the proportion of vehicles that are electric as function of
+the proportion of people who work from home. Create a plot to assess the assumption of normally-distributed
+residuals. What do you notice?
+```{r}
+car = read.csv("C:/Rlab6/electric_WFH.csv")
+
+
+car_lm = lm(prop_electric ~ prop_WFH, data = car )
+
+layout(matrix(2:1, ncol = 2))
+qqnorm(resid(car_lm))
+qqline(resid(car_lm))
+plot(car_lm, which = 1)
+```
+-> There are some outliers, so it is hard to say normally distributed completely. 
+
+(2) [4 pts] PEC that fits a different linear model, this time for the log of the proportion of vehicles that are
+electric as a function of the proportion of people who work from home. Again check the assumption of
+normally-distributed residuals. What do you notice now?
+```{r}
+log_proportion = log(prop_electric) ~ prop_WFH
+fit_log = lm(log_proportion, data = car)
+
+qqnorm(resid(fit_log))
+qqline(resid(fit_log))
+
+```
+-> Yes ,can confirm normally-distributed residuals.
+
+(3) [4 pts] Make a plot of the residuals from your model fit in (2) as a function of the fitted values (hint:
+plot(..., which = 1) ). What does your plot suggest about the validity of the assumptions of independent
+residuals and/or a true linear relationship between the response and predictor?
+```{r}
+plot(fit_log, which = 1)
+```
+-> The residuals are mostly negative when the fitted value is small, positive when the fitted value is in the middle and negative when the fitted value is large. That is, the spread is approximately constant, but the conditional mean is not.
+
+(4) [4 pts] Make a plot of the log of the proportion of vehicles that are electric as a function of the proportion
+of people who work from home. Add a line that represents the fit from your model in (2) (hint: you might
+find the function abline() useful). Make a guess about why your plot in (3) looks the way it does.
+```{r}
+summary(fit_log)
+plot(log(prop_electric)~ prop_WFH, data = car)
+
+abline(a = -5.4910, b = 1.0984)
+```
+
+(5) [4 pts] What is the proportion of people who work from home in San Diego County? Use your model from (2)
+to make a 95% confidence interval for the expected proportion of vehicles for counties with this proportion
+of people working from home. Make sure your prediction is for a proportion, not a log-proportion. How
+does your interval compare to the observed proportion of vehicles that are electric in San Diego County?
+```{r}
+pred = predict(fit_log, newdata = data.frame(prop_WFH = 0.465493213), interval = "confidence")
+exp(pred)
+
+```
+
+
+###II.Generalized Additive Model 
+
+(6) Use the mgcv package to fit a Generalized Additive Model (GAM) for the log of the proportion
+of vehicles that are electric as a flexible function of the proportion of people who work from home. Use
+the default smoothing basis of thin plate regression splines (i.e., bs = "tp") and a basis dimension of 10.
+PEC. Make sure your coefficients match mine.
+```{r}
+library(mgcv)
+fit_gam = gam(log(prop_electric) ~ s(prop_WFH, k =10, bs = "tp"), data = car)
+gam.check(fit_gam)
+#fit$coefficients
+```
+
+(7) Make a plot of residuals as a function of fitted values for your GAM in (6). How does it compare
+to the plot for the linear model in (3)? What does your new plot suggest about the validity of model
+assumptions?
+```{r}
+plot(resid(fit_gam) ~ prop_WFH, data=car )
+
+```
+
+(8) [4 pts] Make a new 95% CI for the expected proportion of vehicles that are electric in counties with the same proportion of people working from home as in San Diego County using your GAM from (6). How does your interval compare to the one you made in (5)? To the observed proportion of vehicles that are electric in San Diego County?
+```{r}
+pred = predict(fit_gam, newdata = data.frame(prop_WFH = 0.465493213), se.fit = TRUE)
+CI = exp(pred$fit+ qnorm(c(0.025, 0.975))* pred$se.fit )
+CI
+```
+
+
+(9) [4 pts] Fit a new GAM for the log proportion of vehicles that are electric using cubic regression splines
+instead of thin plate splines and still uses a basis dimension of 10. PEC.
+```{r}
+library(mgcv)
+fitte = gam(log(prop_electric) ~ s(prop_WFH, k =10, bs = "cr"), data = car)
+gam.check(fitte)
+```
+
+(10) [4 pts] Make a plot of proportion of vehicles that are electric as a function of the proportion of people
+who work from home. Add three curves representing the predicted proportion of vehicles that are electric
+according to the (1) linear, (2) GAM with thin plate regression splines and (3) GAM with cubic regression
+splines.
+```{r}
+
+
+sequence = seq(from = min(car$prop_WFH), to = max(car$prop_WFH), length.out = 1000)
+pred_1 =predict(fit_log, newdata = data.frame(prop_WFH = sequence), se.fit = T)
+pred_2 =predict(fit_gam, newdata = data.frame(prop_WFH = sequence), se.fit = T)
+pred_3 =predict(fitte, newdata = data.frame(prop_WFH = sequence), se.fit = T)
+plot(prop_electric ~ prop_WFH, data = car)
+
+lines(sequence, exp(pred_1$fit), lwd = 2, col = 1)
+lines(sequence, exp(pred_2$fit), lwd = 2, col = 2)
+lines(sequence, exp(pred_3$fit), lwd = 2, col = 3)
+```
+
